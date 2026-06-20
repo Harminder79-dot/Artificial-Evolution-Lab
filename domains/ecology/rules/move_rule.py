@@ -7,6 +7,7 @@ from configs.settings import (WORLD_WIDTH, WORLD_HEIGHT)
 class MoveRule(Rule):
 
     def apply(self, environment,):
+        angle = 0
 
         for organism, action in environment.actions:
 

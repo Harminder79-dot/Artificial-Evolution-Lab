@@ -2,6 +2,7 @@ import random
 import copy
 import numpy as np
 
+
 # Gene limits
 GENE_BOUNDS = {
     "speed": (0.5, 7.0),
