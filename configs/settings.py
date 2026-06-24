@@ -5,8 +5,8 @@ FPS                  = 30
 BG_COLOR             = (12, 12, 22)
 
 # ── Population ─────────────────────────────────────────────────────────────────
-INITIAL_ORGANISMS    = 40
-MAX_ORGANISMS        = 300
+INITIAL_ORGANISMS    = 30
+MAX_ORGANISMS        = 80
 INITIAL_FOOD         = 40
 MAX_AGE              = 3000
 
@@ -35,7 +35,7 @@ USE_QUANTUM_MUTATION = True
 
 # ── Predators ──────────────────────────────────────────────
 
-INITIAL_PREDATORS = 10
+INITIAL_PREDATORS = 5
 
 PREDATOR_SPEED = 3.8
 PREDATOR_VISION = 140
@@ -46,7 +46,7 @@ PREDATOR_KILL_ENERGY = 80
 PREDATOR_REPRODUCTION_THRESH = 250
 PREDATOR_REPRODUCTION_COST = 100
 
-MAX_PREDATORS = 40
+MAX_PREDATORS = 10
 
 PREDATOR_MAX_AGE = 2500
 

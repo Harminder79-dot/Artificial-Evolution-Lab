@@ -1,7 +1,4 @@
-from matplotlib import lines
 import pygame
-
-from agents import organism
 from configs.settings import (
     WORLD_WIDTH,
     WORLD_HEIGHT,
@@ -135,28 +132,15 @@ class Renderer:
 
         for line in lines:
 
-            text = self.font.render(
-
-                line,
-
-                True,
-
-                (255,255,255)
-
-            )
-
-            self.screen.blit(
-
+            text = self.font.render(line, True, (255,255,255))
+            
+            self.screen.blit( 
                 text,
-
                 (
-
-                    mouse_x + 15,
-
+                    mouse_x + 15, 
                     mouse_y + y_offset
-
+                    
                 )
-
             )
 
             y_offset += 20
@@ -188,12 +172,7 @@ class Renderer:
 
         lines.append("Drives")
 
-
-        for drive,value in (
-
-            organism.drives.items()
-
-        ):
+        for drive, value in organism.drives.items():
 
             lines.append(
 
@@ -227,21 +206,32 @@ class Renderer:
 
         )
 
+        if remembered_food:
+            lines.append(
 
-        lines.append(
+                f"Memory : {remembered_food}"
 
-            f"Memory : {remembered_food}"
+            )
 
-        )
+        else:
+            lines.append(
 
+                "Memory : Unknown"
+                
+            )
 
         y = 20
-
 
         for line in lines:
 
             surface = self.font.render(line,True,(255,255,255))
 
-        self.screen.blit(surface,(20,y))
+            self.screen.blit(surface,(20,y))
 
-        y += 25
+            y += 25
+
+
+    def draw_bar(self, screen, x, y, width, height, value):
+
+        pygame.draw.rect(screen, (80,80,80), (x,y,width,height))
+        pygame.draw.rect(screen, (0,220,0),(x, y, width * value, height))

@@ -8,11 +8,11 @@ from configs.settings import QUANTUM_ENTROPY
 
 # ── Classical Gaussian Mutation ──────────────────────────────────────────────
 
-def gaussian_mutate(genome: dict, rate: float = 0.12, strength: float = 0.18) -> dict:
+def gaussian_mutate(genome: dict, gene_bounds: dict, rate: float = 0.12, strength: float = 0.40) -> dict:
 
     child = copy.deepcopy(genome)
 
-    for key, (lo, hi) in GENE_BOUNDS.items():
+    for key, (lo, hi) in gene_bounds.items():
 
         if random.random() < rate:
 
@@ -22,7 +22,11 @@ def gaussian_mutate(genome: dict, rate: float = 0.12, strength: float = 0.18) ->
                 * random.gauss(0, 1)
             )
 
-    return clamp_genome(child)
+    for key,(lo,hi) in gene_bounds.items():
+
+        child[key] = max(lo, min(hi, child[key]))
+
+    return child
 
 
 # ── Quantum-Inspired Mutation ────────────────────────────────────────────────

@@ -1,29 +1,8 @@
-from collections import deque
-
-
 class Memory:
 
-    def __init__(
+    def __init__(self):
 
-        self,
-
-        max_events=100
-
-    ):
-
-        # recent experiences
-
-        self.events = deque(
-
-            maxlen=max_events
-
-        )
-
-
-        # persistent information
-
-        self.state = {}
-
+        self.storage = {}
 
 
     def remember(
@@ -32,65 +11,22 @@ class Memory:
 
         key,
 
-        value
+        value,
+
+        confidence=1.0
 
     ):
 
-        self.state[key] = value
+        self.storage[key] = {
 
+            "value": value,
+
+            "confidence": confidence
+
+        }
 
 
     def recall(
-
-        self,
-
-        key,
-
-        default=None
-
-    ):
-
-        return self.state.get(
-
-            key,
-
-            default
-
-        )
-
-
-
-    def add_event(
-
-        self,
-
-        event
-
-    ):
-
-        self.events.append(
-
-            event
-
-        )
-
-
-
-    def recent_events(
-
-        self
-
-    ):
-
-        return list(
-
-            self.events
-
-        )
-
-
-
-    def forget(
 
         self,
 
@@ -98,6 +34,80 @@ class Memory:
 
     ):
 
-        if key in self.state:
+        data = self.storage.get(key)
 
-            del self.state[key]
+        if data:
+
+            return data["value"]
+
+        return None
+
+
+    def get_confidence(
+
+        self,
+
+        key
+
+    ):
+
+        data = self.storage.get(key)
+
+        if data:
+
+            return data["confidence"]
+
+        return 0
+
+
+    def strengthen(
+
+        self,
+
+        key,
+
+        amount=0.1
+
+    ):
+
+        if key in self.storage:
+
+            self.storage[key]["confidence"] = min(
+
+                1,
+
+                self.storage[key]["confidence"]
+
+                +
+
+                amount
+
+            )
+
+
+    def weaken(
+
+        self,
+
+        key,
+
+        amount=0.05
+
+    ):
+
+        if key in self.storage:
+
+            self.storage[key]["confidence"] -= amount
+
+
+            if (
+
+                self.storage[key]["confidence"]
+
+                <=
+
+                0
+
+            ):
+
+                del self.storage[key]

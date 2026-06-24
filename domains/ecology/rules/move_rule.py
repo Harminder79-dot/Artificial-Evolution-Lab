@@ -1,3 +1,4 @@
+from core import environment
 from core.rule import Rule
 from core.action_type import ActionType
 import math
@@ -30,12 +31,7 @@ class MoveRule(Rule):
 
             if action.type == ActionType.SEARCH_FOOD:
 
-                target = organism.memory.recall(
-
-                    "food_position"
-
-                )
-
+                target = organism.memory.recall("food_position")
 
                 if target:
 
@@ -79,9 +75,9 @@ class MoveRule(Rule):
 
                 )
 
-                dx = math.cos(angle)
+                    dx = math.cos(angle)
 
-                dy = math.sin(angle)
+                    dy = math.sin(angle)
 
 
 
@@ -151,6 +147,12 @@ class MoveRule(Rule):
                         dx /= length
 
                         dy /= length
+
+                    else:
+
+                        dx = 0
+
+                        dy = 0
 
                 else:
 

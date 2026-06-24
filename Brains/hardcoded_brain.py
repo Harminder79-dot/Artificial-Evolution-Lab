@@ -31,7 +31,7 @@ class HardcodedBrain(Brain):
 
                 nearest_food = food
 
-                organism.memory.remember("food_position",nearest_food)
+                organism.memory.remember("food_position",nearest_food, confidence=1.0)
 
         return {
 

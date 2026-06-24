@@ -27,6 +27,13 @@ class Organism(Agent):
 
     def __init__(self, x, y, genome=None):
 
+        import uuid
+
+        self.id = str(uuid.uuid4())[:6]
+        self.generation = 0
+        self.parent_id = None
+        self.children = []
+
         super().__init__()
 
         self.life_events = []
@@ -142,6 +149,7 @@ class Organism(Agent):
             if distance < FOOD_RADIUS:
 
                 self.energy += FOOD_ENERGY
+                self.add_event("Ate food")
 
                 if self.energy > 400:
                     self.energy = 400
@@ -182,10 +190,24 @@ class Organism(Agent):
             genome=child_genome
          )
 
+         child.generation = (self.generation + 1)
+
+         child.parent_id = (self.id)
+
+         self.children.append(child.id)
+         self.add_event(f"Reproduced -> {child.id}")
+
          return child
     
     def is_dead(self):
+         if ( self.energy <= 0 or self.age >= MAX_AGE):
 
+            self.add_event("Died")
+
+            return True
+
+         return False   
+    
          return (
              self.energy <= 0
              or self.age >= MAX_AGE
