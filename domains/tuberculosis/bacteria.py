@@ -4,6 +4,7 @@ import uuid
 from core.agent import Agent
 from domains.tuberculosis.tb_genome import TB_GENE_BOUNDS
 from evolution.mutation import gaussian_mutate
+from domains.tuberculosis.tb_grn import TBGRN
 
 
 class Bacteria(Agent):
@@ -33,7 +34,7 @@ class Bacteria(Agent):
 
             "replication_rate":
 
-                random.uniform(0.0002,0.002),
+                random.uniform(0.002,0.01),
 
             "inh_resistance":
 
@@ -87,28 +88,24 @@ class Bacteria(Agent):
 
         )
 
-    def move(self):
+        self.grn = TBGRN()
 
-        if self.state != Bacteria.ACTIVE:
+    def move(self, oxygen_field):
 
-            return
-
-
-        angle = random.uniform(
-
-            0,
-
-            2 * math.pi
-
-        )
-
-
-        speed = 1
-        dx = math.cos(angle)
-        dy = math.sin(angle)
-
-        self.x += dx * speed
-        self.y += dy * speed
+        best_angle = None 
+        best_oxygen = -1 
+        
+        for _ in range(8): 
+            angle = random.uniform(0, 2*math.pi) 
+            
+            test_x = self.x + math.cos(angle) * 10 
+            test_y = self.y + math.sin(angle) * 10 
+            
+            o2 = oxygen_field.oxygen_at( test_x, test_y ) 
+            
+            if o2 > best_oxygen: 
+                best_oxygen = o2 
+                best_angle = angle
 
 
     def reproduce(self):
@@ -145,7 +142,7 @@ class Bacteria(Agent):
 
         )
 
-        self.energy -= 5
+        self.energy -= 20
 
         if self.energy <= 0:
             self.state = Bacteria.DEAD
@@ -197,33 +194,33 @@ class Bacteria(Agent):
 
         oxygen = oxygen_field.oxygen_at(self.x, self.y)
 
-        # Oxygen-driven state transition
+        self.grn.update(oxygen)
+
+        if random.random() < 0.001:
+            print(
+                "O2:",
+                round(oxygen, 2),
+                "dosR:",
+                round(self.grn.genes["dosR"], 2),
+                "growth:",
+                round(self.grn.genes["growth"], 2),
+                "stress:",
+                round(self.grn.genes["stress"], 2)
+            )
+
+        self.state = self.grn.dominant_state()
 
         if oxygen > 0.7:
 
-            if self.state == Bacteria.DORMANT:
-
-                self.state = Bacteria.REACTIVATING
-
-            elif self.state != Bacteria.REACTIVATING:
-
-                self.state = Bacteria.ACTIVE
-
+            self.energy += 0.01
 
         elif oxygen > 0.3:
 
-            self.state = Bacteria.STRESSED
+            self.energy += 0.005
 
+        self.energy = min(self.energy, 100)
 
-        else:
-
-            self.state = Bacteria.DORMANT     
-
-        if self.state == Bacteria.REACTIVATING:
-
-            if random.random() < 0.03:
-
-                self.state = Bacteria.ACTIVE  
+        # Oxygen-driven state transition       
 
         if self.state == Bacteria.DORMANT:
 
@@ -236,7 +233,7 @@ class Bacteria(Agent):
                 return
 
 
-        self.move()
+        self.move(oxygen_field)
 
         if self.state == Bacteria.ACTIVE:
             self.energy -= 0.01

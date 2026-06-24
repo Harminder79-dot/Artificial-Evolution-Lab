@@ -1,6 +1,6 @@
 TB_GENE_BOUNDS = {
 
-    "replication_rate": (0.0001, 0.003),
+    "replication_rate": (0.001, 0.02),
 
     "inh_resistance": (0, 1),
 

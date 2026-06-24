@@ -13,7 +13,6 @@ from configs.settings import (
     FPS
 
 )
-
 from domains.tuberculosis.macrophage import Macrophage
 from domains.tuberculosis.bacteria import Bacteria
 from domains.tuberculosis.tb_renderer import TBRenderer
@@ -23,7 +22,6 @@ class TBWorld:
 
 
     def __init__(self):
-
 
         self.tick = 0
 
@@ -48,6 +46,14 @@ class TBWorld:
         self.bacteria_by_id = {}
 
         self.granulomas = []
+
+        self.granulomas.append(
+            Granuloma(
+                WORLD_WIDTH//2,
+                WORLD_HEIGHT//2,
+                80
+            )
+        )
 
         self.avg_inh_history = []
 
@@ -82,23 +88,13 @@ class TBWorld:
 
             b = Bacteria(
 
-                random.randint(
+                WORLD_WIDTH//2 + random.randint(-40,40),
 
-                    0,
-
-                    WORLD_WIDTH
-
-                ),
-
-                random.randint(
-
-                    0,
-
-                    WORLD_HEIGHT
-
-                )
+                WORLD_HEIGHT//2 + random.randint(-40,40)
 
             )
+
+    
 
             self.lineage_stats[b.id] = {
                 "founder": b.id,
@@ -152,14 +148,13 @@ class TBWorld:
 
     def update(self):
 
+        self.oxygen.update(self.granulomas)
+        self.oxygen.consume_oxygen(self.bacteria)
         new_granuloma_bacteria = []
-
-        self.oxygen.grid[:] = 1.0
         self.tick += 1
         reproduction_added = 0
         granuloma_added = 0
         macrophage_added = 0
-        self.update_oxygen()
 
         if self.tick % 20 == 0:
           
@@ -186,6 +181,10 @@ class TBWorld:
 
                     dormant_tb += 1
 
+            print(
+                "Granuloma dormant:",
+                dormant_tb
+            )
 
             burst = g.update(dormant_tb)
 
@@ -257,17 +256,24 @@ class TBWorld:
 
                 if dx*dx + dy*dy < 64:   
                     
-                    kill_prob = (1 - m.exhaustion)
+                    kill_prob = max(
+                        0.35, 
+                        0.9 - m.exhaustion
+                    )
 
                     if random.random() < kill_prob:
 
                         b.state = Bacteria.DEAD
+
+                        print("TB KILLED")
 
                     else:
 
                         m.infect()
 
                         b.state = Bacteria.DEAD
+
+                        print("MACROPHAGE INFECTED")
 
                         print(
                             f"INFECTED MACROPHAGE "
@@ -294,7 +300,7 @@ class TBWorld:
         newborns = []
         births = 0
 
-        for b in self.bacteria:
+        for b in self.bacteria[:]:
 
             b.update(self.oxygen)
 
@@ -312,8 +318,6 @@ class TBWorld:
                 births += 1
                 reproduction_added += 1
                 newborns.append(child)
-
-                self.bacteria.extend(newborns)
 
                 self.lineages[child.id] = {
 
@@ -346,7 +350,8 @@ class TBWorld:
                 f"Tick:{self.tick} "
                 f"Births:{births} "
                 f"Newborns:{len(newborns)} "
-                f"Pop:{len(self.bacteria)}"
+                f"Pop:{len(self.bacteria)}",
+                flush=True
             )
 
             self.bacteria_by_id = {
@@ -361,7 +366,7 @@ class TBWorld:
 
         for m in self.macrophages:
 
-            burst = m.update()
+            burst = m.update(self.bacteria)
 
             if burst:
 
@@ -373,11 +378,7 @@ class TBWorld:
 
                 )
 
-                for _ in range(
-
-                    m.intracellular_tb
-
-                ):
+                for _ in range(m.intracellular_tb):
                     
                     print(f"RUPTURE @ Tick {self.tick}")
 
@@ -386,16 +387,15 @@ class TBWorld:
                         f"{len(self.bacteria)}"
                     )
 
+                    angle = random.uniform(0, 2*math.pi)
+
+                    radius = random.uniform(5,40)
+
                     child = Bacteria(
 
-                        m.x +
+                        m.x + radius*math.cos(angle),
 
-                        random.randint(-20, 20),
-
-                        m.y +
-
-                        random.randint(-20, 20)
-
+                        m.y + radius*math.sin(angle)
                     )
 
                     self.lineages[child.id] = {
@@ -410,7 +410,10 @@ class TBWorld:
 
                     new_bacteria.append(child)
 
-        self.bacteria.extend(new_bacteria)
+        MAX_BACTERIA = 2000
+
+        if len(self.bacteria) < MAX_BACTERIA:
+            self.bacteria.extend(new_bacteria)
 
         macrophage_added = len(new_bacteria)
 
@@ -453,6 +456,57 @@ class TBWorld:
         )
 
         if self.tick % 100 == 0:
+
+            active = sum(
+                1 for b in self.bacteria
+                if b.state == Bacteria.ACTIVE
+            )
+
+            dormant = sum(
+                1 for b in self.bacteria
+                if b.state == Bacteria.DORMANT
+            )
+
+            stressed = sum(
+                1 for b in self.bacteria
+                if b.state == Bacteria.STRESSED
+            )
+
+            print(
+                f"ACTIVE:{active} "
+                f"DORMANT:{dormant} "
+                f"STRESSED:{stressed}"
+            )
+
+            inside = 0
+
+            for b in self.bacteria:    
+                
+                d = math.hypot(
+                    b.x - self.granulomas[0].x,
+                    b.y - self.granulomas[0].y
+                )
+
+                if d < self.granulomas[0].radius:
+                    inside += 1
+
+
+            print(
+                "Oxygen:",
+                self.oxygen.grid.min(),
+                self.oxygen.grid.max(),
+                min(self.oxygen.grid.flatten()),
+                max(self.oxygen.grid.flatten())
+            )
+
+            sample = random.choice(self.bacteria)
+
+            o2 = self.oxygen.oxygen_at(
+                sample.x,
+                sample.y
+            )
+
+            print("Sample oxygen:", round(o2, 2))
 
             avg_inh = sum(
 
@@ -730,6 +784,22 @@ class TBWorld:
                     strongest.y
 
                 )
+
+                if signal > 0.7:
+
+                    if random.random() < 0.003:
+
+                        self.macrophages.append(
+
+                            Macrophage(
+
+                                strongest.x + random.randint(-40,40),
+
+                                strongest.y + random.randint(-40,40)
+
+                            )
+
+                        )
 
     def run(self):
 
