@@ -1,3 +1,4 @@
+from matplotlib import lines
 import pygame
 from configs.settings import (
 
@@ -371,6 +372,8 @@ class TBRenderer:
 
         ]
 
+        lines.append("")
+        lines.append("GRN")
 
         for gene,value in b.genome.items():
 
@@ -500,3 +503,9 @@ class TBRenderer:
                     1
 
                 )
+
+    def gene_color(value):
+
+        intensity = int(value * 255)
+
+        return (intensity, 255-intensity, 80)

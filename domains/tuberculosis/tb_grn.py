@@ -1,48 +1,222 @@
 import random
-
+from domains.tuberculosis.tb_grn_network import REGULATORY_NETWORK
+import math
 
 class TBGRN:
 
-    def __init__(self):
+    def __init__(self, genome):
+
+        # Store genome for later use
+        self.genome = genome
 
         self.oxygen = 1.0
 
-        self.genes = {
+        self.regulators = {
+            "dosR": 0.0,          # Dormancy regulator
+            "sigH": 0.0,          # Oxidative stress response
+            "sigE": 0.0,          # Cell envelope stress
+            "whiB3": 0.0,         # Redox sensing
+            "phoP": 0.5,          # Virulence regulation
+            "mprA": 0.0
+        }              
+        
+        self.functions = {self.update_functions()}
+
+        self.physiology = {
+            "energy": 1.0,
+            "metabolism": 1.0,
+            "cell_wall": 1.0,
+            "redox_balance": 1.0
+
+}
+
+        self.inputs = {
+            "oxygen": 1.0,
+            "drug": 0.0,
+            "immune": 0.0,
+            "nutrient": 1.0,
+            "redox":0.0,
+            "acidic_pH":0.0,
+            "nitric_oxide":0.0,
+            "iron_limitation":0.0
+        }
+
+        self.memory = {
 
             "dosR": 0.0,
-            "growth": 1.0,
-            "stress": 0.0
+            "sigH": 0.0,
+            "sigE": 0.0,
+            "mprA": 0.0,
+            "phoP": 0.0,
+            "whiB3": 0.0
 
         }
 
-    def update(self, oxygen):
+        self.sensitivity = {
+            "dosR": genome["dosR_sensitivity"],
+            "stress": genome["stress_sensitivity"],
+            "growth": genome["growth_sensitivity"]
+        }
+
+    def update(self, oxygen, drug=0.0, immune=0.0, nutrient=1.0):
 
         self.oxygen = oxygen
 
-        self.genes["dosR"] *= 0.95
-        self.genes["growth"] *= 0.95
-        self.genes["stress"] *= 0.95
+        self.inputs["oxygen"] = oxygen
+        self.inputs["drug"] = drug
+        self.inputs["immune"] = immune
+        self.inputs["nutrient"] = nutrient
 
-        self.genes["dosR"] += (1 - oxygen) * 0.05
-        self.genes["growth"] += oxygen * 0.03
-        self.genes["stress"] += abs(0.5 - oxygen) * 0.02
+        g = self.regulators
 
-        for gene in self.genes:
+        # Small decay so regulators fade over time
+        for gene in g:
+            g[gene] *= 0.95
 
-            self.genes[gene] = max(
-                0,
-                min(
-                    1,
-                    self.genes[gene]
-                )
+        # ---------- Regulatory interactions ----------
+
+        for _ in range(3):
+
+            new_genes = {}
+
+            for gene in g:
+
+                total_input = (0.7 * g[gene] + 0.3 * self.memory.get(gene, 0.0))
+    
+                total_input += self.environmental_signal(gene)
+
+    # Incoming regulation
+                for source, targets in self.genome["grn_weights"].items():
+
+                    if gene in targets:
+                        total_input += g[source] * targets[gene]
+
+                new_genes[gene] = self.sigmoid(total_input)
+
+        # Clamp values to [0,1]
+            g = new_genes
+
+        self.regulators = new_genes
+
+        self.functions["growth"] = max(
+            0.0,
+            1.0 - 0.7 * self.regulators["dosR"]
+        )
+
+        self.functions["replication"] = self.functions["growth"]
+
+        self.functions["efflux"] = self.regulators["sigE"]
+
+        for gene in self.memory:
+
+            self.memory[gene] = self.regulators[gene]
+
+    def phenotype(self):
+
+        g = self.regulators
+
+        self.current_phenotype = {
+
+            "growth_factor": self.physiology["metabolism"],
+            "stress_tolerance": 0.5 * (g["sigH"] + g["sigE"]),
+            "dormancy": g["dosR"],
+            "virulence": g["phoP"],
+            "drug_efflux": self.functions["efflux"] * self.physiology["cell_wall"],
+            "persistence": g["mprA"]
+
+        }
+
+        return self.current_phenotype
+    
+    def sigmoid(self, x):
+        return 1.0 / (1.0 + math.exp(-x))
+    
+    def environmental_signal(self, gene):
+
+        signal = 0.0
+
+        if gene == "dosR":
+
+            signal += (
+                (1-self.inputs["oxygen"])
+                *0.08
+                *self.sensitivity["dosR"]
             )
 
-    def dominant_state(self):
+        elif gene == "sigH":
 
-        if self.genes["dosR"] > 0.65:
-            return "DORMANT"
+            signal += (
+                self.inputs["immune"]
+                *0.06
+                *self.sensitivity["stress"]
+            )
 
-        if 0.30 < self.oxygen < 0.60:
-            return "STRESSED"
+        elif gene == "sigE":
 
-        return "ACTIVE"
+            signal += (
+                self.inputs["drug"]
+                *0.05
+                *self.sensitivity["stress"]
+            )
+
+        elif gene == "whiB3":
+
+            signal += (
+                self.inputs["redox"]
+                *0.07
+            )
+
+        return signal
+    
+    def update_functions(self):
+
+        r = self.regulators
+        f = self.functions
+
+        f["growth"] = self.sigmoid(
+
+            2.0
+            - 2.0*r["dosR"]
+            - 0.8*r["sigH"]
+            - 0.5*r["mprA"]
+            + 0.4*r["phoP"]
+
+        )
+
+        f["replication"] = f["growth"]
+
+        f["efflux"] = self.sigmoid(
+
+            2.0*r["sigE"]
+
+            +0.5*r["mprA"]
+
+        )
+
+    def update_physiology(self):
+
+        r = self.regulators
+
+        f = self.functions
+
+        p = self.physiology
+
+        p["metabolism"] = (
+            0.7 * f["growth"]
+            + 0.3 * (1 - r["dosR"])
+        )
+
+        p["energy"] = (
+            0.6 * p["metabolism"]
+            + 0.4 * self.inputs["nutrient"]
+        )
+
+        p["cell_wall"] = (
+            0.7
+            + 0.3 * r["sigE"]
+        )
+
+        p["redox_balance"] = (
+            0.5
+            + 0.5 * r["whiB3"]
+        )

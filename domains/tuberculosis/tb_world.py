@@ -61,6 +61,22 @@ class TBWorld:
 
         self.population_history = []
 
+        self.grn_history = {
+
+            "dosR": [],
+
+            "sigH": [],
+
+            "sigE": [],
+
+            "phoP": [],
+
+            "mprA": [],
+
+            "whiB3": []
+
+        }
+
         self.mdr_history = []
 
         self.renderer = TBRenderer()
@@ -537,6 +553,38 @@ class TBWorld:
 
             )
 
+            if self.bacteria:
+
+                for regulator in self.grn_history:
+
+                    avg = sum(
+
+                        b.grn.regulators[regulator]
+
+                        for b in self.bacteria
+
+                    ) / len(self.bacteria)
+
+                    self.grn_history[regulator].append(avg)
+
+            print("\nAverage GRN Activity")
+
+            for regulator in self.grn_history:
+
+                print(
+
+                    regulator,
+
+                    round(
+
+                        self.grn_history[regulator][-1],
+
+                        3
+
+                    )
+
+                )
+
             lineage_sizes = {}
 
             for b in self.bacteria:
@@ -941,13 +989,14 @@ class TBWorld:
 
         if self.treatment["INH"]:
 
-            prob = 0.002 * (
+            efflux = b.grn.genes["efflux"]
 
-                1 -
-
-                b.genome["inh_resistance"]
-
+            effective_resistance = min(
+                1.0,
+                b.genome["inh_resistance"] + 0.3 * efflux
             )
+
+            prob = 0.002 * (1 - effective_resistance)
 
             if (
 

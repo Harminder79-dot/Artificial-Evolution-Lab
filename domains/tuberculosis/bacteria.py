@@ -5,6 +5,8 @@ from core.agent import Agent
 from domains.tuberculosis.tb_genome import TB_GENE_BOUNDS
 from evolution.mutation import gaussian_mutate
 from domains.tuberculosis.tb_grn import TBGRN
+import copy
+from domains.tuberculosis.tb_grn_network import REGULATORY_NETWORK
 
 
 class Bacteria(Agent):
@@ -30,37 +32,46 @@ class Bacteria(Agent):
 
         self.y = y
 
-        self.genome = genome or {
+        if genome is None:
+         self.genome = {
 
-            "replication_rate":
+            "replication_rate": random.uniform(0.002,0.01),
 
-                random.uniform(0.002,0.01),
+            "inh_resistance": random.uniform(0,0.1),
 
-            "inh_resistance":
+            "rif_resistance": random.uniform(0,0.1),
 
-                random.uniform(0,0.1),
+            "fluoroquinolone_resistance": random.uniform(0,0.1),
 
-            "rif_resistance":
+            "injectable_resistance": random.uniform(0,0.1),
 
-                random.uniform(0,0.1),
+            "dormancy_tendency": random.uniform(0,1),
 
-            "fluoroquinolone_resistance":
+            "virulence": random.uniform(0,1),
 
-                random.uniform(0,0.1),
+            # -------- GRN genes --------
 
-            "injectable_resistance":
+            "dosR_sensitivity": random.uniform(0.8,1.2),
 
-                random.uniform(0,0.1),
+            "stress_sensitivity": random.uniform(0.8,1.2),
 
-            "dormancy_tendency":
+            "growth_sensitivity": random.uniform(0.8,1.2),
 
-                random.uniform(0,1),
+            "grn_weights": {}
 
-            "virulence":
+         }
 
-                random.uniform(0,1)
+        else:
 
-        }
+            self.genome = genome
+
+        for source, targets in REGULATORY_NETWORK.items():
+
+            self.genome["grn_weights"][source] = {}
+
+            for target in targets:
+
+                self.genome["grn_weights"][source][target] = random.uniform(-1.0, 1.0)
 
         self.state = "ACTIVE"
 
@@ -88,7 +99,7 @@ class Bacteria(Agent):
 
         )
 
-        self.grn = TBGRN()
+        self.grn = TBGRN(self.genome)
 
     def move(self, oxygen_field):
 
@@ -114,7 +125,9 @@ class Bacteria(Agent):
 
             return None
 
-        probability = self.genome[ "replication_rate"]
+        phenotype = self.grn.phenotype()
+
+        probability = (self.genome[ "replication_rate"] * self.grn.current_phenotype["growth_factor"])
 
         fitness_cost = (
 
@@ -171,6 +184,9 @@ class Bacteria(Agent):
 
         for gene in self.genome:
 
+            if gene == "grn_weights":
+                continue
+
             old = self.genome[gene]
 
             new = child.genome[gene]
@@ -196,6 +212,16 @@ class Bacteria(Agent):
 
         self.grn.update(oxygen)
 
+        g = self.grn.genes
+
+        stress_cost = (
+            0.003 * g["sigH"] +
+            0.003 * g["sigE"] +
+            0.002 * g["mprA"]
+        )
+
+        self.energy -= stress_cost
+
         if random.random() < 0.001:
             print(
                 "O2:",
@@ -208,7 +234,19 @@ class Bacteria(Agent):
                 round(self.grn.genes["stress"], 2)
             )
 
-        self.state = self.grn.dominant_state()
+        phenotype = self.grn.phenotype()
+
+        if phenotype["dormancy"] > 0.70:
+
+            self.state = Bacteria.DORMANT
+
+        elif phenotype["stress_tolerance"] > 0.50:
+
+            self.state = Bacteria.STRESSED
+
+        else:
+
+            self.state = Bacteria.ACTIVE
 
         if oxygen > 0.7:
 
@@ -224,7 +262,7 @@ class Bacteria(Agent):
 
         if self.state == Bacteria.DORMANT:
 
-                self.energy -= 0.002
+                self.energy -= (0.002 * (1 - self.grn.genes["dosR"]))
 
                 if self.energy <= 0:
 
@@ -236,7 +274,13 @@ class Bacteria(Agent):
         self.move(oxygen_field)
 
         if self.state == Bacteria.ACTIVE:
-            self.energy -= 0.01
+            loss = 0.01
+
+            loss *= (
+                1 - 0.3 * self.grn.genes["mprA"]
+            )
+
+            self.energy -= loss
 
         elif self.state == Bacteria.STRESSED:
             self.energy -= 0.005

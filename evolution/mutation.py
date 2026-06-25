@@ -26,6 +26,28 @@ def gaussian_mutate(genome: dict, gene_bounds: dict, rate: float = 0.12, strengt
 
         child[key] = max(lo, min(hi, child[key]))
 
+# ── GRN Weight Mutation ─────────────────────────────
+
+    if "grn_weights" in child:
+
+        EDGE_MUTATION_RATE = 0.05      # 5% chance per edge
+        EDGE_SIGMA = 0.05              # Gaussian std-dev
+        MIN_WEIGHT = -2.0
+        MAX_WEIGHT = 2.0
+
+        for source, targets in child["grn_weights"].items():
+
+            for target in targets:
+
+                if random.random() < EDGE_MUTATION_RATE:
+
+                    targets[target] += random.gauss(0, EDGE_SIGMA)
+
+                    targets[target] = max(
+                        MIN_WEIGHT,
+                        min(MAX_WEIGHT, targets[target])
+                    )
+
     return child
 
 
