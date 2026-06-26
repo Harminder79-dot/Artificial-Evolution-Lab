@@ -1,6 +1,7 @@
 import random
 from domains.tuberculosis.tb_grn_network import REGULATORY_NETWORK
 import math
+from domains.tuberculosis.tb_parameters import TB_PARAMETERS
 
 class TBGRN:
 
@@ -81,7 +82,7 @@ class TBGRN:
 
             for gene in g:
 
-                total_input = (0.7 * g[gene] + 0.3 * self.memory.get(gene, 0.0))
+                total_input = (TB_PARAMETERS["memory_current"] * g[gene] + TB_PARAMETERS["memory_previous"] * self.memory.get(gene, 0.0))
     
                 total_input += self.environmental_signal(gene)
 
@@ -128,8 +129,61 @@ class TBGRN:
 
         return self.current_phenotype
     
+    def state_scores(self):
+
+        p = self.phenotype()
+
+        scores = {
+
+            "ACTIVE":
+
+                (
+                    p["growth_factor"]
+                    + self.inputs["oxygen"]
+                    + self.inputs["nutrient"]
+                ) / 3,
+
+            "DORMANT":
+
+                (
+                    p["dormancy"]
+                    + (1 - self.inputs["oxygen"])
+                ) / 2,
+
+            "STRESSED":
+
+                (
+                    p["stress_tolerance"]
+                    + self.inputs["drug"]
+                    + self.inputs["immune"]
+                ) / 3,
+
+            "REACTIVATING":
+
+                (
+                    p["growth_factor"]
+                    + self.inputs["oxygen"]
+                    - p["dormancy"]
+                ) / 3
+
+        }
+
+        return scores
+    
+    def choose_state(self):
+
+        scores = self.state_scores()
+
+        return max(
+
+            scores,
+
+            key=scores.get
+
+        )
+        
     def sigmoid(self, x):
-        return 1.0 / (1.0 + math.exp(-x))
+            return 1.0 / (1.0 + math.exp(-x))
     
     def environmental_signal(self, gene):
 
@@ -139,7 +193,7 @@ class TBGRN:
 
             signal += (
                 (1-self.inputs["oxygen"])
-                *0.08
+                *TB_PARAMETERS["dosR_activation"]
                 *self.sensitivity["dosR"]
             )
 
@@ -147,7 +201,7 @@ class TBGRN:
 
             signal += (
                 self.inputs["immune"]
-                *0.06
+                *TB_PARAMETERS["sigH_activation"]
                 *self.sensitivity["stress"]
             )
 
@@ -155,7 +209,7 @@ class TBGRN:
 
             signal += (
                 self.inputs["drug"]
-                *0.05
+                *TB_PARAMETERS["sigE_activation"]
                 *self.sensitivity["stress"]
             )
 
@@ -163,7 +217,7 @@ class TBGRN:
 
             signal += (
                 self.inputs["redox"]
-                *0.07
+                *TB_PARAMETERS["whiB3_activation"]
             )
 
         return signal
@@ -175,11 +229,11 @@ class TBGRN:
 
         f["growth"] = self.sigmoid(
 
-            2.0
-            - 2.0*r["dosR"]
-            - 0.8*r["sigH"]
-            - 0.5*r["mprA"]
-            + 0.4*r["phoP"]
+            TB_PARAMETERS["growth_bias"],
+            TB_PARAMETERS["growth_dosR_weight"]*r["dosR"],
+            TB_PARAMETERS["growth_sigH_weight"]*r["sigH"],
+            TB_PARAMETERS["growth_mprA_weight"]*r["mprA"],
+            TB_PARAMETERS["growth_phoP_weight"]*r["phoP"]
 
         )
 
@@ -187,9 +241,9 @@ class TBGRN:
 
         f["efflux"] = self.sigmoid(
 
-            2.0*r["sigE"]
+            TB_PARAMETERS["efflux_sigE_weight"]*r["sigE"],
 
-            +0.5*r["mprA"]
+            TB_PARAMETERS["efflux_mprA_weight"]*r["mprA"]
 
         )
 

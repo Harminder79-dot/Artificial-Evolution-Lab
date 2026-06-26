@@ -4,6 +4,7 @@ import pygame
 from domains.tuberculosis.granuloma import Granuloma
 from domains.tuberculosis.immune_cell import ImmuneCell
 from domains.tuberculosis.oxygen_field import OxygenField
+from domains.tuberculosis.tb_observables import TBObservables
 from configs.settings import (
 
     WORLD_WIDTH,
@@ -36,6 +37,8 @@ class TBWorld:
             "EMB": False
 
         }
+
+        self.observables = TBObservables()
 
         self.bacteria = []
 
@@ -164,88 +167,21 @@ class TBWorld:
 
     def update(self):
 
-        self.oxygen.update(self.granulomas)
-        self.oxygen.consume_oxygen(self.bacteria)
-        new_granuloma_bacteria = []
         self.tick += 1
+
+        self.update_environment()
+
+        new_granuloma_bacteria = self.update_granulomas()
+
+        self.bacteria.extend(new_granuloma_bacteria)
+
+        granuloma_added = len(new_granuloma_bacteria)
+
         reproduction_added = 0
-        granuloma_added = 0
+
         macrophage_added = 0
 
-        if self.tick % 20 == 0:
-          
-
-          for g in self.granulomas:
-
-            dormant_tb = 0
-
-            for b in self.bacteria:
-
-                if b.state != Bacteria.DORMANT:
-
-                    continue
-
-                d = math.hypot(
-
-                    b.x - g.x,
-
-                    b.y - g.y
-
-                )
-
-                if d < g.radius:
-
-                    dormant_tb += 1
-
-            print(
-                "Granuloma dormant:",
-                dormant_tb
-            )
-
-            burst = g.update(dormant_tb)
-
-            if burst:
-
-                print(
-                    f"GRANULOMA RUPTURE @ {self.tick}"
-                )
-
-                print(
-                    f"Population before rupture:"
-                    f"{len(self.bacteria)}"
-                )
-
-                for _ in range(20):
-
-                    b = Bacteria(
-
-                        g.x +
-
-                        random.randint(-40,40),
-
-                        g.y +
-
-                        random.randint(-40,40)
-
-                    )
-
-                    b.state = Bacteria.ACTIVE
-
-                    new_granuloma_bacteria.append(b)
-
-                    granuloma_added += 1
-
-                    self.lineages[b.id] = {
-
-                        "parent": None,
-
-                        "children": []
-
-                    }
-
-          self.bacteria.extend(new_granuloma_bacteria)
-
-          if len(new_granuloma_bacteria) > 0:
+        if granuloma_added:
 
             print(
                 f"Granuloma added "
@@ -515,14 +451,16 @@ class TBWorld:
                 max(self.oxygen.grid.flatten())
             )
 
-            sample = random.choice(self.bacteria)
+            if self.bacteria:
 
-            o2 = self.oxygen.oxygen_at(
-                sample.x,
-                sample.y
-            )
+                sample = random.choice(self.bacteria)
 
-            print("Sample oxygen:", round(o2, 2))
+                o2 = self.oxygen.oxygen_at(
+                    sample.x,
+                    sample.y
+                )
+
+                print("Sample oxygen:", round(o2, 2))
 
             avg_inh = sum(
 
@@ -584,6 +522,38 @@ class TBWorld:
                     )
 
                 )
+
+            obs = self.observables.data
+
+            N = max(1, len(self.bacteria))
+
+            obs["population"] = len(self.bacteria)
+
+            obs["active_fraction"] = active / N
+
+            obs["dormant_fraction"] = dormant / N
+
+            obs["stressed_fraction"] = stressed / N
+
+            obs["average_dosR"] = sum(
+                b.grn.regulators["dosR"]
+                for b in self.bacteria
+            ) / N
+
+            obs["average_sigH"] = sum(
+                b.grn.regulators["sigH"]
+                for b in self.bacteria
+            ) / N
+
+            obs["average_sigE"] = sum(
+                b.grn.regulators["sigE"]
+                for b in self.bacteria
+            ) / N
+
+            obs["average_growth"] = sum(
+                b.grn.functions["growth"]
+                for b in self.bacteria
+            ) / N
 
             lineage_sizes = {}
 
@@ -849,6 +819,12 @@ class TBWorld:
 
                         )
 
+    def update_environment(self):
+
+        self.oxygen.update(self.granulomas)
+
+        self.oxygen.consume_oxygen(self.bacteria)
+
     def run(self):
 
 
@@ -989,7 +965,7 @@ class TBWorld:
 
         if self.treatment["INH"]:
 
-            efflux = b.grn.genes["efflux"]
+            efflux = b.grn.functions["efflux"]
 
             effective_resistance = min(
                 1.0,
@@ -1038,3 +1014,83 @@ class TBWorld:
             ):
 
                 b.state = Bacteria.DEAD
+
+    def update_granulomas(self):
+
+        new_granuloma_bacteria = []
+
+        if self.tick % 20 == 0:
+          
+
+            for g in self.granulomas:
+
+                dormant_tb = 0
+
+                for b in self.bacteria:
+
+                    if b.state != Bacteria.DORMANT:
+
+                        continue
+
+                    d = math.hypot(
+
+                        b.x - g.x,
+
+                        b.y - g.y
+
+                    )
+
+                    if d < g.radius:
+
+                        dormant_tb += 1
+
+            print(
+                "Granuloma dormant:",
+                dormant_tb
+            )
+
+            burst = g.update(dormant_tb)
+
+            if burst:
+
+                print(
+                    f"GRANULOMA RUPTURE @ {self.tick}"
+                )
+
+                print(
+                    f"Population before rupture:"
+                    f"{len(self.bacteria)}"
+                )
+
+                for _ in range(20):
+
+                    b = Bacteria(
+
+                        g.x +
+
+                        random.randint(-40,40),
+
+                        g.y +
+
+                        random.randint(-40,40)
+
+                    )
+
+                    b.state = Bacteria.ACTIVE
+
+                    new_granuloma_bacteria.append(b)
+
+                    self.lineages[b.id] = {
+
+                        "parent": None,
+
+                        "children": []
+
+                    }
+
+                    self.lineage_stats[b.id] = {
+                        "founder": b.id,
+                        "birth_tick": self.tick
+                    }
+
+        return new_granuloma_bacteria
