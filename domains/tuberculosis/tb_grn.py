@@ -82,7 +82,17 @@ class TBGRN:
 
             for gene in g:
 
-                total_input = (TB_PARAMETERS["memory_current"] * g[gene] + TB_PARAMETERS["memory_previous"] * self.memory.get(gene, 0.0))
+                momentum = TB_PARAMETERS["regulator_momentum"]
+
+                total_input = (
+
+                    momentum * g[gene]
+
+                    +
+
+                    (1 - momentum) * self.memory[gene]
+
+                )
     
                 total_input += self.environmental_signal(gene)
 
@@ -97,8 +107,6 @@ class TBGRN:
         # Clamp values to [0,1]
             g = new_genes
 
-        self.regulators = new_genes
-
         self.functions["growth"] = max(
             0.0,
             1.0 - 0.7 * self.regulators["dosR"]
@@ -107,6 +115,8 @@ class TBGRN:
         self.functions["replication"] = self.functions["growth"]
 
         self.functions["efflux"] = self.regulators["sigE"]
+
+        self.regulators = new_genes
 
         for gene in self.memory:
 
@@ -133,40 +143,47 @@ class TBGRN:
 
         p = self.phenotype()
 
-        scores = {
+        scores = {}
 
-            "ACTIVE":
+        scores["ACTIVE"] = (
 
-                (
-                    p["growth_factor"]
-                    + self.inputs["oxygen"]
-                    + self.inputs["nutrient"]
-                ) / 3,
+            0.45 * p["growth_factor"]
 
-            "DORMANT":
+            + 0.30 * self.inputs["oxygen"]
 
-                (
-                    p["dormancy"]
-                    + (1 - self.inputs["oxygen"])
-                ) / 2,
+            + 0.25 * self.inputs["nutrient"]
 
-            "STRESSED":
+        )
 
-                (
-                    p["stress_tolerance"]
-                    + self.inputs["drug"]
-                    + self.inputs["immune"]
-                ) / 3,
+        scores["DORMANT"] = (
 
-            "REACTIVATING":
+            0.50 * p["dormancy"]
 
-                (
-                    p["growth_factor"]
-                    + self.inputs["oxygen"]
-                    - p["dormancy"]
-                ) / 3
+            + 0.30 * (1 - self.inputs["oxygen"])
 
-        }
+            + 0.20 * p["persistence"]
+
+        )
+
+        scores["STRESSED"] = (
+
+            0.40 * p["stress_tolerance"]
+
+            + 0.30 * self.inputs["drug"]
+
+            + 0.30 * self.inputs["immune"]
+
+        )
+
+        scores["REACTIVATING"] = (
+
+            0.50 * p["growth_factor"]
+
+            + 0.30 * self.inputs["oxygen"]
+
+            + 0.20 * (1 - p["dormancy"])
+
+        )
 
         return scores
     
@@ -174,13 +191,14 @@ class TBGRN:
 
         scores = self.state_scores()
 
-        return max(
-
+        best_state = max(
             scores,
-
             key=scores.get
-
         )
+
+        self.last_scores = scores
+
+        return best_state
         
     def sigmoid(self, x):
             return 1.0 / (1.0 + math.exp(-x))

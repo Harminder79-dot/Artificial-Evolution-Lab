@@ -21,6 +21,8 @@ TB_PARAMETERS = {
     # ---------------- Memory ----------------
 
     "memory_current": 0.7,
-    "memory_previous": 0.3
+    "memory_previous": 0.3,
+
+    "regulator_momentum": 0.85
 
 }
