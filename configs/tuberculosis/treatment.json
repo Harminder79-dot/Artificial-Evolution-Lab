@@ -1,0 +1,12 @@
+{
+    "experiment": {
+        "name": "treatment"
+    },
+
+    "treatment": {
+        "INH": true,
+        "RIF": true,
+        "PZA": true,
+        "EMB": true
+    }
+}

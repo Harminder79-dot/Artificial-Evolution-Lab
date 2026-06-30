@@ -60,8 +60,12 @@ class TBGRN:
 
                 self.genes[target].add_incoming(c)  
 
+        if len(self.connections) == 0:
+
+            raise RuntimeError("GRN contains no regulatory connections.")
+
         self.network = GRNNetwork(self.genes, self.connections) 
-        
+                
         self.functions = {
             "growth": 1.0,
             "replication": 1.0,
@@ -84,6 +88,8 @@ class TBGRN:
             "drug_efflux": 0.0,
             "persistence": 0.0
         }
+
+        self.last_state = "ACTIVE"
 
         self.inputs = {
             "oxygen": 1.0,
@@ -242,12 +248,27 @@ class TBGRN:
 
         scores = self.state_scores(metabolism)
 
-        best_state = max(
-            scores,
-            key=scores.get
+        ordered = sorted(
+
+            scores.items(),
+
+            key=lambda x: x[1],
+
+            reverse=True
+
         )
 
+        best_state = ordered[0][0]
+
+        if len(ordered) > 1:
+
+            if ordered[0][1] - ordered[1][1] < 0.05:
+
+                best_state = self.last_state
+
         self.last_scores = scores
+
+        self.last_state = best_state
 
         return best_state
         

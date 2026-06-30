@@ -24,9 +24,11 @@ class Bacteria(Agent):
     DEAD = "DEAD"
 
 
-    def __init__(self, x, y, genome=None):
+    def __init__(self, x, y, genome=None, config=None):
 
         super().__init__()
+
+        self.config = config
 
         self.id = uuid.uuid4().hex[:8]
 
@@ -37,7 +39,11 @@ class Bacteria(Agent):
         if genome is None:
          self.genome = {
 
-            "replication_rate": random.uniform(0.002,0.01),
+            "replication_rate": random.uniform(
+                self.config["bacteria"]["replication_min"],
+
+                self.config["bacteria"]["replication_max"]
+            ),
 
             "inh_resistance": random.uniform(0,0.1),
 
@@ -79,7 +85,9 @@ class Bacteria(Agent):
 
         self.state = "ACTIVE"
 
-        self.energy = 50
+        self.energy = self.config["bacteria"]["initial_energy"]
+
+        self.fitness = 0.0
 
         self.age = 0
 
@@ -126,6 +134,15 @@ class Bacteria(Agent):
                 best_oxygen = o2 
                 best_angle = angle
 
+        if best_angle is not None:
+
+            step = 2
+
+            self.x += math.cos(best_angle) * step
+            self.y += math.sin(best_angle) * step
+
+        self.x = max(0, min(self.x, oxygen_field.width - 1))
+        self.y = max(0, min(self.y, oxygen_field.height - 1))
 
     def reproduce(self, world):
 
@@ -166,27 +183,14 @@ class Bacteria(Agent):
         )
 
         density_factor = max(
-            0.15,
-            1 - neighbors / 35
+            0.40,
+            1 - neighbors / 50
         )
 
         probability *= density_factor
 
-        if random.random() < 0.0005:
-            print(
-                f"[REPRO] ID={self.id} "
-                f"State={self.state} "
-                f"Prob={probability:.5f} "
-                f"Growth={self.grn.current_phenotype['growth_factor']:.3f} "
-                f"Energy={self.energy:.1f}"
-                f"Density={neighbors} "
-                f"Factor={density_factor:.2f}"
-            )
-
         if random.random() > probability:
-
             return None
-
 
         child_genome = gaussian_mutate(
 
@@ -195,7 +199,7 @@ class Bacteria(Agent):
 
         )
 
-        self.energy -= 20
+        self.energy -= self.config["bacteria"]["birth_energy_cost"]
 
         if self.energy <= 0:
             self.state = Bacteria.DEAD
@@ -207,7 +211,9 @@ class Bacteria(Agent):
 
             self.y + random.randint(-5,5),
 
-            child_genome
+            child_genome,
+
+            config=self.config
 
         )
 
@@ -281,42 +287,9 @@ class Bacteria(Agent):
 
         self.energy -= stress_cost
 
-        if random.random() < 0.001:
-            print(
-                "O2:",
-                round(oxygen, 2),
-                "dosR:",
-                round(self.grn.regulators["dosR"], 2),
-                "growth:",
-                round(self.grn.functions["growth"], 2),
-                "sigH:",
-                round(self.grn.regulators["sigH"], 2),
-                "sigE:",
-                round(self.grn.regulators["sigE"], 2)
-            )
-
         phenotype = self.grn.phenotype(self.metabolism)
 
-        if phenotype["dormancy"] > 0.80:
-
-            self.state = Bacteria.DORMANT
-
-        elif (
-            phenotype["stress_tolerance"] > 0.75
-            and self.grn.inputs["immune"] > 0.30
-        ):
-
-            self.state = Bacteria.STRESSED
-
-        elif (
-            phenotype["growth_factor"] > 0.45
-        ):
-
-            self.state = Bacteria.ACTIVE
-
-        else:
-
-            self.state = Bacteria.REACTIVATING
+        self.state = self.grn.choose_state(self.metabolism)
 
         self.energy += oxygen * 0.12
 
@@ -354,6 +327,24 @@ class Bacteria(Agent):
 
         if self.energy <= 0:
             self.state = Bacteria.DEAD
+
+        self.fitness = (
+
+            0.30 * self.energy
+
+            +
+
+            0.30 * self.grn.current_phenotype["growth_factor"]
+
+            +
+
+            0.20 * self.metabolism.cell_health
+
+            +
+
+            0.20 * self.metabolism.atp
+
+        )
 
     @property
 

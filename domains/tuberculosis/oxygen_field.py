@@ -3,20 +3,13 @@ import numpy as np
 
 class OxygenField:
 
-    def __init__(
+    def __init__(self, width, height, resolution=10, diffusion_rate=1.0, decay_rate=0.005):
 
-        self,
+        self.width = width
 
-        width,
-
-        height,
-
-        resolution=10
-
-    ):
+        self.height = height
 
         self.resolution = resolution
-
 
         self.cols = width // resolution
 
@@ -34,6 +27,10 @@ class OxygenField:
             )
 
         )
+
+        self.diffusion_rate = diffusion_rate
+
+        self.decay_rate = decay_rate
 
 
     def oxygen_at(

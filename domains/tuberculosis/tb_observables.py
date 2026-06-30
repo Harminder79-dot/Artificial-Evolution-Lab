@@ -14,7 +14,7 @@ class TBObservables:
 
             "stressed_fraction": [],
 
-            "average_dosR": [],
+            "average_dosR": [], 
 
             "average_sigH": [],
 
@@ -35,7 +35,7 @@ class TBObservables:
             "average_grn_weight": []
         }
 
-    def record(self, world):
+    def record(self, world, ):
 
         bacteria = world.bacteria
 

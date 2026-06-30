@@ -1,0 +1,9 @@
+{
+    "experiment": {
+        "name": "hypoxia"
+    },
+
+    "environment": {
+        "oxygen_diffusion": 0.45
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "experiment": {
+        "name": "immune_high"
+    },
+
+    "population": {
+        "initial_macrophages": 100,
+        "initial_immune": 60
+    }
+}

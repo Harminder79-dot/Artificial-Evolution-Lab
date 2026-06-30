@@ -385,6 +385,48 @@ class TBRenderer:
 
             (f"Population : {len(bacteria)}", (255,255,255)),
 
+            (
+                f"Avg Fitness : "
+                f"{debug_stats['average_fitness']:.2f}",
+                (120,255,120)
+            ),
+
+            (
+                f"Best Fitness : "
+                f"{debug_stats['best_fitness']:.2f}",
+                (255,255,120)
+            ),
+
+            (
+                f"Best Gen : "
+                f"{debug_stats['best_generation']}",
+                (255,220,120)
+            ),
+
+            (
+                f"ACTIVE : "
+                f"{debug_stats['active_percent']:.1f}%",
+                (0,255,0)
+            ),
+
+            (
+                f"STRESSED : "
+                f"{debug_stats['stressed_percent']:.1f}%",
+                (255,180,0)
+            ),
+
+            (
+                f"DORMANT : "
+                f"{debug_stats['dormant_percent']:.1f}%",
+                (100,200,255)
+            ),
+
+            (
+                f"REACTIVATING : "
+                f"{debug_stats['reactivating_percent']:.1f}%",
+                (255,100,255)
+            ),
+
             (f"Granulomas : {len(granulomas)}", (255,255,255)),
 
             (f"Macrophages : {len(macrophages)}", (255,255,255)),
@@ -488,6 +530,24 @@ class TBRenderer:
             (
                 f"sigE : "
                 f"{debug_stats['avg_sigE']:.2f}",
+                (255,180,120)
+            ),
+
+            (
+                f"dosR σ : "
+                f"{debug_stats['dosR_std']:.3f}",
+                (120,255,255)
+            ),
+
+            (
+                f"sigH σ : "
+                f"{debug_stats['sigH_std']:.3f}",
+                (255,150,255)
+            ),
+
+            (
+                f"sigE σ : "
+                f"{debug_stats['sigE_std']:.3f}",
                 (255,180,120)
             ),
 
@@ -626,7 +686,22 @@ class TBRenderer:
             (
                 f"History : {history_size}",
                 (180,180,255)
-            )
+            ),
+
+            (
+                f"Peak Pop : {debug_stats['peak_population']}",
+                (220,220,220)
+            ),
+
+            (
+                f"Lowest Pop : {debug_stats['lowest_population']}",
+                (220,220,220)
+            ),
+
+            (
+                f"Runtime : {debug_stats['runtime']:.1f}s",
+                (220,220,220)
+            ),
 
         ]
 
@@ -731,6 +806,7 @@ class TBRenderer:
 
         y = 360
 
+        scores = b.grn.last_scores
 
         lines = [
 
@@ -748,7 +824,27 @@ class TBRenderer:
 
             f"Age : {b.age}",
 
+            f"Fitness : {b.fitness:.2f}",
+
             f"State : {b.state}",
+
+            f"Growth : {b.grn.current_phenotype['growth_factor']:.2f}",
+
+            f"Stress : {b.grn.current_phenotype['stress_tolerance']:.2f}",
+
+            f"Dormancy : {b.grn.current_phenotype['dormancy']:.2f}",
+
+            "",
+
+            "State Scores",
+
+            f"ACTIVE : {scores['ACTIVE']:.2f}",
+
+            f"DORMANT : {scores['DORMANT']:.2f}",
+
+            f"STRESSED : {scores['STRESSED']:.2f}",
+
+            f"REACTIVATING : {scores['REACTIVATING']:.2f}",
 
             "",
 
