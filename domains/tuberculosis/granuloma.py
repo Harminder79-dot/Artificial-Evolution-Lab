@@ -21,7 +21,7 @@ class Granuloma:
 
         self.state = Granuloma.HEALTHY
 
-        self.necrotic = 0
+        self.necrosis = 0
 
 
     def update(self, dormant_tb):

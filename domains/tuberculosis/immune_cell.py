@@ -81,3 +81,41 @@ class ImmuneCell:
             self.x += dx
 
             self.y += dy
+
+    def move_up_cytokine_gradient(self, cytokines):
+
+        step = 10
+
+        left = cytokines.cytokine_at(
+            self.x - step,
+            self.y
+        )
+
+        right = cytokines.cytokine_at(
+            self.x + step,
+            self.y
+        )
+
+        up = cytokines.cytokine_at(
+            self.x,
+            self.y - step
+        )
+
+        down = cytokines.cytokine_at(
+            self.x,
+            self.y + step
+        )
+
+        best = max(left, right, up, down)
+
+        if best == left:
+            self.x -= self.speed
+
+        elif best == right:
+            self.x += self.speed
+
+        elif best == up:
+            self.y -= self.speed
+
+        elif best == down:
+            self.y += self.speed

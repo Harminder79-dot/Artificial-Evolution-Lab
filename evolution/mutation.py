@@ -26,8 +26,29 @@ def gaussian_mutate(genome: dict, gene_bounds: dict, rate: float = 0.12, strengt
 
         child[key] = max(lo, min(hi, child[key]))
 
-    return child
+    if "grn_weights" in child:
 
+        EDGE_MUTATION_RATE = 0.05
+        EDGE_SIGMA = 0.05
+
+        for source, targets in child["grn_weights"].items():
+
+            for target in targets:
+
+                if random.random() < EDGE_MUTATION_RATE:
+
+                    targets[target] += random.gauss(
+                        0,
+                        EDGE_SIGMA
+                    )
+
+                    targets[target] = max(
+                        -1.0,
+                        min(
+                            1.0,
+                            targets[target]
+                        )
+                    )
 
 # ── Quantum-Inspired Mutation ────────────────────────────────────────────────
 
