@@ -261,14 +261,22 @@ class Bacteria(Agent):
         return child
 
 
-    def update(self, oxygen_field):
+    def update(self, oxygen_field, treatment):
 
         self.age += 1
 
         oxygen = oxygen_field.oxygen_at(self.x, self.y)
 
-        self.grn.update(oxygen)
+        immune = 0.0
 
+        drug = 1.0 if any(treatment.values()) else 0.0
+
+        self.grn.update(
+            oxygen,
+            immune=immune,
+            drug=drug
+        )
+        
         g = self.grn.regulators
 
         self.metabolism.update(

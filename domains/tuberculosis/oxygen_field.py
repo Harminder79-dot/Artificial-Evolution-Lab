@@ -96,7 +96,9 @@ class OxygenField:
     
     def update(self, granulomas):
 
-        self.grid[:] = 1.0
+        self.diffuse()
+
+        self.grid *= (1.0 - self.decay_rate)
 
         for g in granulomas:
 
@@ -131,12 +133,11 @@ class OxygenField:
                             self.grid[r,c] - reduction
                         )
 
+        self.grid = np.clip(self.grid, 0.0, 1.0)
+
     def consume_oxygen(self, bacteria):
 
-        self.grid[:] = np.minimum(
-            self.grid + 0.0001,
-            1.0
-        )
+        self.grid += 0.002
 
         for b in bacteria:
 
@@ -145,9 +146,42 @@ class OxygenField:
 
             if 0 <= r < self.rows and 0 <= c < self.cols:
 
-                self.grid[r, c] -= 0.05
+                if b.state == b.ACTIVE:
+                    consumption = 0.05
+
+                elif b.state == b.REACTIVATING:
+                    consumption = 0.035
+
+                elif b.state == b.STRESSED:
+                    consumption = 0.02
+
+                else:   # DORMANT
+                    consumption = 0.008
+
+                self.grid[r, c] -= consumption
 
                 self.grid[r, c] = max(
                     0.1,
                     self.grid[r, c]
                 )
+
+        self.grid = np.clip(self.grid, 0.0, 1.0)
+
+    def diffuse(self):
+
+        new_grid = self.grid.copy()
+
+        for r in range(1, self.rows - 1):
+            for c in range(1, self.cols - 1):
+
+                neighbors = self.grid[r-1:r+2, c-1:c+2]
+
+                neighbor_avg = (neighbors.sum() - self.grid[r, c]) / 8.0
+
+                new_grid[r, c] += (
+                    self.diffusion_rate
+                    * 0.2
+                    * (neighbor_avg - self.grid[r, c])
+                )
+
+        self.grid = new_grid

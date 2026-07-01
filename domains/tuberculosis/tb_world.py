@@ -374,7 +374,7 @@ class TBWorld:
 
         for b in self.bacteria[:]:
 
-            b.update(self.oxygen)
+            b.update(self.oxygen, self.treatment)
 
             if (
                 self.first_dormancy_tick is None
@@ -1546,8 +1546,13 @@ class TBWorld:
 
     def update_environment(self):
 
+        # Diffusion + decay + granuloma hypoxia
+        self.oxygen.update(self.granulomas)
+
+        # Bacterial oxygen consumption
         self.oxygen.consume_oxygen(self.bacteria)
 
+        # Cytokines
         self.cytokines.update()
 
     def run(self):
@@ -1695,42 +1700,6 @@ class TBWorld:
 
         pygame.quit()
         return
-
-    def update_oxygen(self):
-
-        self.oxygen.grid[:] = 1.0
-
-        for g in self.granulomas:
-
-            for row in range(self.oxygen.rows):
-
-                for col in range(self.oxygen.cols):
-
-                    x = col * self.oxygen.resolution
-
-                    y = row * self.oxygen.resolution
-
-                    d = math.hypot(
-
-                        x - g.x,
-
-                        y - g.y
-
-                    )
-
-                    if d < g.radius:
-
-                        factor = d / g.radius
-
-                        oxygen = 0.1 + 0.9 * factor
-
-                        self.oxygen.grid[row,col] = min(
-
-                            self.oxygen.grid[row,col],
-
-                            oxygen
-
-                        )
 
     def print_ancestry(self, bacterium):
 

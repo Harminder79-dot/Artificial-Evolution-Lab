@@ -14,7 +14,7 @@ class TBMetabolism:
 
             0.10 * grn.functions["growth"]
 
-            - 0.05 * (1 - inputs["oxygen"])
+            - 0.10 * (1 - inputs["oxygen"])
 
         )
 

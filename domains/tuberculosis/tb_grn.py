@@ -215,10 +215,8 @@ class TBGRN:
         scores["DORMANT"] = (
 
             0.50 * p["dormancy"]
-
-            + 0.30 * (1 - self.inputs["oxygen"])
-
-            + 0.20 * p["persistence"]
+            + 0.25 * (1 - self.inputs["oxygen"])
+            + 0.25 * p["persistence"]
 
         )
 
@@ -320,6 +318,7 @@ class TBGRN:
         growth_input = (
 
             TB_PARAMETERS["growth_bias"]
+            + 0.4 * self.inputs["oxygen"]
             + TB_PARAMETERS["growth_dosR_weight"] * r["dosR"]
             + TB_PARAMETERS["growth_sigH_weight"] * r["sigH"]
             + TB_PARAMETERS["growth_mprA_weight"] * r["mprA"]

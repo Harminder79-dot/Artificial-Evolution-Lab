@@ -4,13 +4,13 @@ TB_PARAMETERS = {
     # GRN
     # ------------------------
 
-    "dosR_activation":0.08,
-    "sigH_activation":0.06,
-    "sigE_activation":0.05,
-    "whiB3_activation":0.04,
+    "dosR_activation":0.35,
+    "sigH_activation":0.20,
+    "sigE_activation":0.20,
+    "whiB3_activation":0.15,
 
     "regulator_decay":0.95,
-    "regulator_momentum":0.85,
+    "regulator_momentum":0.50,
 
     # ------------------------
     # Functional decoder
